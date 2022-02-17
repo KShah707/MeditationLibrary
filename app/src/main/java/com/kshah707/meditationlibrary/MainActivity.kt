@@ -8,90 +8,85 @@ import android.widget.Button
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 
+// Define meditation topic tree
+val rootTopic = MeditationTopic("_", null, listOf(
+    MeditationTopic("Calm My Emotions", null, listOf(
+        MeditationTopic("from Work Stress", null, listOf(), "https://youtu.be/67hw7hj_xkc"),
+        MeditationTopic("from Social Situations", null, listOf(), "https://youtu.be/67hw7hj_xkc"),
+    ), null),
+    MeditationTopic("Narrow My Focus", null, listOf(
+        MeditationTopic("for One Hard Task", null, listOf(), "https://youtu.be/67hw7hj_xkc"),
+        MeditationTopic("for Many Easy Tasks", null, listOf(), "https://youtu.be/67hw7hj_xkc"),
+    ), null),
+    MeditationTopic("Widen My Focus", null, listOf(
+        MeditationTopic("for Creativity", null, listOf(), "https://youtu.be/67hw7hj_xkc"),
+        MeditationTopic("for Playfulness", null, listOf(), "https://youtu.be/67hw7hj_xkc"),
+    ), null),
+    MeditationTopic("Try Something New", null, listOf(), "https://youtu.be/67hw7hj_xkc"),
+), null)
+
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Define meditation topic tree
-        val rootTopic = MeditationTopic("root topic", null, listOf(
-            MeditationTopic("Calm My Emotions", null, listOf(
-                MeditationTopic("from Work Stress", null, listOf(), "https://www.youtube.com/watch?v=bzSTpdcs-EI"),
-                MeditationTopic("from Social Situations", null, listOf(), "https://www.youtube.com/watch?v=bzSTpdcs-EI"),
-            ), null),
-            MeditationTopic("Narrow My Focus", null, listOf(
-                MeditationTopic("for One Hard Task", null, listOf(), "https://www.youtube.com/watch?v=bzSTpdcs-EI"),
-                MeditationTopic("for Many Easy Tasks", null, listOf(), "https://www.youtube.com/watch?v=bzSTpdcs-EI"),
-            ), null),
-            MeditationTopic("Widen My Focus", null, listOf(
-                MeditationTopic("for Creativity", null, listOf(), "https://www.youtube.com/watch?v=bzSTpdcs-EI"),
-                MeditationTopic("for Playfulness", null, listOf(), "https://www.youtube.com/watch?v=bzSTpdcs-EI"),
-            ), null),
-            MeditationTopic("Try Something New", null, listOf(), "https://www.youtube.com/watch?v=bzSTpdcs-EI"),
-        ), null)
-
         // set root as current topic
         var currentRoot = rootTopic
 
-        // Populate starting layout
+        val rootLayout = findViewById<LinearLayout>(R.id.rootLayout)
         val buttonLayout = findViewById<LinearLayout>(R.id.buttonLayout)
-        // Define onClick handler
-        fun btnOnClick(view: View?) {
-            val btn = view as Button
 
+        // draw buttons based on current root's children
+        fun renderButtons(btnOnClick: (Button) -> Unit) {
+            // clear existing buttons
             buttonLayout.removeAllViews()
+
+            // display children buttons
+            for (child in currentRoot.children) {
+                // create and add a new button for each subtopic
+                val newBtn = Button(this)
+                newBtn.text = child.name
+                newBtn.setOnClickListener { view ->
+                    val btn = view as Button
+                    btnOnClick(btn)
+                }
+                buttonLayout.addView(newBtn)
+            }
+
+            // display back button if possible
+            if (currentRoot.parent != null) {
+                val backBtn = Button(this)
+                backBtn.text = "Go Back"
+                backBtn.setOnClickListener {
+                    currentRoot = currentRoot.parent!!
+                    renderButtons(btnOnClick)
+                }
+                buttonLayout.addView(backBtn)
+            }
+        }
+
+        // Define topic buttons' onClick handler
+        fun topicBtnOnClick(btn: Button) {
+            // currentRoot is now clicked child
+            currentRoot = currentRoot.getChildByName(btn.text as String)!!
+
             if (currentRoot.children.isEmpty()) {
-                // FIXME Go to youtube link
-//                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(currentRoot.destinationUrl));
-//                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//                intent.setPackage("com.google.android.youtube");
-//                startActivity(intent)
-
-                // FIXME temp test, move back
-                // internally move up to parent
-                currentRoot = currentRoot.parent
-
-                // display parent's children as next level of navigation
-                for (child in currentRoot.children) {
-                    val newBtn = Button(this)
-                    newBtn.text = child.name
-                    newBtn.setOnClickListener { v -> btnOnClick(v) }
-                    buttonLayout.addView(newBtn)
-                }
+                // Go to YouTube link
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(currentRoot.destinationUrl))
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
             } else {
-                // internally move down to a child
-                currentRoot = currentRoot.getChildByName(btn.text as String)!!
-
-                // display child's children as next level of navigation
-                for (child in currentRoot.children) {
-                    val newBtn = Button(this)
-                    newBtn.text = child.name
-                    newBtn.setOnClickListener { v -> btnOnClick(v) }
-                    buttonLayout.addView(newBtn)
-                }
+                // display children as next level of navigation
+                renderButtons(::topicBtnOnClick)
             }
         }
 
         // populate starting layout with initial nodes
-        for (child in currentRoot.children) {
-            // create a Button to display the topic
-            val newBtn = Button(this)
-            newBtn.text = child.name
+        renderButtons(::topicBtnOnClick)
 
-            // set onClick
-            newBtn.setOnClickListener {v -> btnOnClick(v)}
-            buttonLayout.addView(newBtn)
-        }
-
-        // TODO:
-        // piece by piece. MVP as fast as possible.
-        // in the constructor:
-        // maintain currentRoot var (= root)
-        // add function that does this and call it:
-        //    for children, map each to buttons (name, imgUrl, onClick target) and display in view
-        // bind onClick, either open destinationUrl or if has children, set currentRoot to that child
-        // and call function to recreate layout (or go to new activity/screen with that layout)
-        // refine choices list, add images, style
+        // TODO: remaining
+        // refine topic tree with links
+        // add images, style
         // write article
     }
 }
@@ -104,7 +99,7 @@ class MeditationTopic(
     var destinationUrl: String?
     )
 {
-    lateinit var parent: MeditationTopic
+    var parent: MeditationTopic? = null
 
     init {
         for (child in children) {
